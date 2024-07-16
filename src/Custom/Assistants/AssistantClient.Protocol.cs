@@ -2,6 +2,7 @@ using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace OpenAI.Assistants;
@@ -306,21 +307,69 @@ public partial class AssistantClient
     public virtual ClientResult DeleteMessage(string threadId, string messageId, RequestOptions options)
         => _messageSubClient.DeleteMessage(threadId, messageId, options);
 
-    /// <inheritdoc cref="InternalAssistantRunClient.CreateThreadAndRunAsync"/>
-    public virtual Task<ClientResult> CreateThreadAndRunAsync(BinaryContent content, RequestOptions options = null)
-        => _runSubClient.CreateThreadAndRunAsync(content, options);
+    public virtual /*async*/ Task<ThreadRunOperation> CreateThreadAndRunAsync(
+        ReturnWhen returnWhen,
+        BinaryContent content,
+        RequestOptions options = null)
+    {
+        throw new NotImplementedException();
+        //ClientResult result = await _runSubClient.CreateThreadAndRunAsync(content, options).ConfigureAwait(false);
 
-    /// <inheritdoc cref="InternalAssistantRunClient.CreateThreadAndRun"/>
-    public virtual ClientResult CreateThreadAndRun(BinaryContent content, RequestOptions options = null)
-        => _runSubClient.CreateThreadAndRun(content, options = null);
+        //// Protocol level: get values needed to create subclient from response
+        //PipelineResponse response = result.GetRawResponse();
+        //using JsonDocument doc = JsonDocument.Parse(response.Content);
+        //string threadId = doc.RootElement.GetProperty("thread_id"u8).GetString()!;
+        //string runId = doc.RootElement.GetProperty("id"u8).GetString()!;
 
-    /// <inheritdoc cref="InternalAssistantRunClient.CreateRunAsync"/>
-    public virtual Task<ClientResult> CreateRunAsync(string threadId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.CreateRunAsync(threadId, content, options);
+        //// Create the poller
+        //ThreadRunPoller poller = new ThreadRunPoller(_pipeline, _endpoint, result, threadId, runId, options);
 
-    /// <inheritdoc cref="InternalAssistantRunClient.CreateRun"/>
-    public virtual ClientResult CreateRun(string threadId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.CreateRun(threadId, content, options);
+        //// Create the operation subclient
+        //ThreadRunOperation operation = new ThreadRunOperation(
+        //    _pipeline, _endpoint,
+        //    threadId, runId, result.GetRawResponse(),
+        //    poller);
+
+        //if (returnWhen == ReturnWhen.Started)
+        //{
+        //    return operation;
+        //}
+
+        //operation.WaitForCompletionResult();
+        //return operation;
+    }
+
+    public virtual ThreadRunOperation CreateThreadAndRun(
+        ReturnWhen returnWhen,
+        BinaryContent content,
+        RequestOptions options = null)
+    {
+        throw new NotImplementedException();
+        //ClientResult result = _runSubClient.CreateThreadAndRun(content, options);
+
+        //// Protocol level: get values needed to create subclient from response
+        //PipelineResponse response = result.GetRawResponse();
+        //using JsonDocument doc = JsonDocument.Parse(response.Content);
+        //string threadId = doc.RootElement.GetProperty("thread_id"u8).GetString()!;
+        //string runId = doc.RootElement.GetProperty("id"u8).GetString()!;
+
+        //// Create the poller
+        //ThreadRunPoller poller = new ThreadRunPoller(_pipeline, _endpoint, result, threadId, runId, options);
+
+        //// Create the operation subclient
+        //ThreadRunOperation operation = new ThreadRunOperation(
+        //    _pipeline, _endpoint,
+        //    threadId, runId, result.GetRawResponse(),
+        //    poller);
+
+        //if (returnWhen == ReturnWhen.Started)
+        //{
+        //    return operation;
+        //}
+
+        //operation.WaitForCompletionResult();
+        //return operation;
+    }
 
     /// <summary>
     /// [Protocol Method] Returns a paginated collection of runs belonging to a thread.
@@ -392,119 +441,55 @@ public partial class AssistantClient
         return PageCollectionHelpers.Create(enumerator);
     }
 
-    /// <inheritdoc cref="InternalAssistantRunClient.GetRunAsync"/>
-    public virtual Task<ClientResult> GetRunAsync(string threadId, string runId, RequestOptions options)
-        => _runSubClient.GetRunAsync(threadId, runId, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.GetRun"/>
-    public virtual ClientResult GetRun(string threadId, string runId, RequestOptions options)
-        => _runSubClient.GetRun(threadId, runId, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.ModifyRunAsync"/>
-    public virtual Task<ClientResult> ModifyRunAsync(string threadId, string runId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.ModifyRunAsync(threadId, runId, content, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.ModifyRun"/>
-    public virtual ClientResult ModifyRun(string threadId, string runId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.ModifyRun(threadId, runId, content, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.CancelRunAsync"/>
-    public virtual Task<ClientResult> CancelRunAsync(string threadId, string runId, RequestOptions options)
-        => _runSubClient.CancelRunAsync(threadId, runId, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.CancelRun"/>
-    public virtual ClientResult CancelRun(string threadId, string runId, RequestOptions options)
-        => _runSubClient.CancelRun(threadId, runId, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.SubmitToolOutputsToRunAsync"/>
-    public virtual Task<ClientResult> SubmitToolOutputsToRunAsync(string threadId, string runId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.SubmitToolOutputsToRunAsync(threadId, runId, content, options);
-
-    /// <inheritdoc cref="InternalAssistantRunClient.SubmitToolOutputsToRun"/>
-    public virtual ClientResult SubmitToolOutputsToRun(string threadId, string runId, BinaryContent content, RequestOptions options = null)
-        => _runSubClient.SubmitToolOutputsToRun(threadId, runId, content, options);
-
-    /// <summary>
-    /// [Protocol Method] Returns a paginated collection of run steps belonging to a run.
-    /// </summary>
-    /// <param name="threadId"> The ID of the thread the run and run steps belong to. </param>
-    /// <param name="runId"> The ID of the run the run steps belong to. </param>
-    /// <param name="limit">
-    /// A limit on the number of objects to be returned. Limit can range between 1 and 100, and the
-    /// default is 20.
-    /// </param>
-    /// <param name="order">
-    /// Sort order by the `created_at` timestamp of the objects. `asc` for ascending order and`desc`
-    /// for descending order. Allowed values: "asc" | "desc"
-    /// </param>
-    /// <param name="after">
-    /// A cursor for use in pagination. `after` is an object ID that defines your place in the list.
-    /// For instance, if you make a list request and receive 100 objects, ending with obj_foo, your
-    /// subsequent call can include after=obj_foo in order to fetch the next page of the list.
-    /// </param>
-    /// <param name="before">
-    /// A cursor for use in pagination. `before` is an object ID that defines your place in the list.
-    /// For instance, if you make a list request and receive 100 objects, ending with obj_foo, your
-    /// subsequent call can include before=obj_foo in order to fetch the previous page of the list.
-    /// </param>
-    /// <param name="options"> The request options, which can override default behaviors of the client pipeline on a per-call basis. </param>
-    /// <exception cref="ArgumentNullException"> <paramref name="threadId"/> or <paramref name="runId"/> is null. </exception>
-    /// <exception cref="ArgumentException"> <paramref name="threadId"/> or <paramref name="runId"/> is an empty string, and was expected to be non-empty. </exception>
-    /// <exception cref="ClientResultException"> Service returned a non-success status code. </exception>
-    /// <returns> A collection of service responses, each holding a page of values. </returns>
-    public virtual IAsyncEnumerable<ClientResult> GetRunStepsAsync(string threadId, string runId, int? limit, string order, string after, string before, RequestOptions options)
+    public virtual async Task<ThreadRunOperation> CreateRunAsync(
+        ReturnWhen returnWhen,
+        string threadId,
+        BinaryContent content,
+        RequestOptions options = null)
     {
-        Argument.AssertNotNullOrEmpty(threadId, nameof(threadId));
-        Argument.AssertNotNullOrEmpty(runId, nameof(runId));
+        ClientResult result = await _runSubClient.CreateRunAsync(threadId, content, options).ConfigureAwait(false);
+        PipelineResponse response = result.GetRawResponse();
+        ThreadRunOperation operation = new ThreadRunOperation(_pipeline, _endpoint, response);
 
-        RunStepsPageEnumerator enumerator = new RunStepsPageEnumerator(_pipeline, _endpoint, threadId, runId, limit, order, after, before, options);
-        return PageCollectionHelpers.CreateAsync(enumerator);
+        if (returnWhen == ReturnWhen.Started)
+        {
+            return operation;
+        }
+
+        await operation.WaitAsync(options.CancellationToken).ConfigureAwait(false);
+        return operation;
     }
 
-    /// <summary>
-    /// [Protocol Method] Returns a paginated collection of run steps belonging to a run.
-    /// </summary>
-    /// <param name="threadId"> The ID of the thread the run and run steps belong to. </param>
-    /// <param name="runId"> The ID of the run the run steps belong to. </param>
-    /// <param name="limit">
-    /// A limit on the number of objects to be returned. Limit can range between 1 and 100, and the
-    /// default is 20.
-    /// </param>
-    /// <param name="order">
-    /// Sort order by the `created_at` timestamp of the objects. `asc` for ascending order and`desc`
-    /// for descending order. Allowed values: "asc" | "desc"
-    /// </param>
-    /// <param name="after">
-    /// A cursor for use in pagination. `after` is an object ID that defines your place in the list.
-    /// For instance, if you make a list request and receive 100 objects, ending with obj_foo, your
-    /// subsequent call can include after=obj_foo in order to fetch the next page of the list.
-    /// </param>
-    /// <param name="before">
-    /// A cursor for use in pagination. `before` is an object ID that defines your place in the list.
-    /// For instance, if you make a list request and receive 100 objects, ending with obj_foo, your
-    /// subsequent call can include before=obj_foo in order to fetch the previous page of the list.
-    /// </param>
-    /// <param name="options"> The request options, which can override default behaviors of the client pipeline on a per-call basis. </param>
-    /// <exception cref="ArgumentNullException"> <paramref name="threadId"/> or <paramref name="runId"/> is null. </exception>
-    /// <exception cref="ArgumentException"> <paramref name="threadId"/> or <paramref name="runId"/> is an empty string, and was expected to be non-empty. </exception>
-    /// <exception cref="ClientResultException"> Service returned a non-success status code. </exception>
-    /// <returns> A collection of service responses, each holding a page of values. </returns>
-    public virtual IEnumerable<ClientResult> GetRunSteps(string threadId, string runId, int? limit, string order, string after, string before, RequestOptions options)
+    public virtual ThreadRunOperation CreateRun(
+        ReturnWhen returnWhen,
+        string threadId,
+        BinaryContent content,
+        RequestOptions options = null)
     {
-        Argument.AssertNotNullOrEmpty(threadId, nameof(threadId));
-        Argument.AssertNotNullOrEmpty(runId, nameof(runId));
+        options ??= new();
 
-        RunStepsPageEnumerator enumerator = new RunStepsPageEnumerator(_pipeline, _endpoint, threadId, runId, limit, order, after, before, options);
-        return PageCollectionHelpers.Create(enumerator);
+        ClientResult result = _runSubClient.CreateRun(threadId, content, options);
+        PipelineResponse response = result.GetRawResponse();
+        ThreadRunOperation operation = new ThreadRunOperation(_pipeline, _endpoint, response);
+
+        if (returnWhen == ReturnWhen.Started)
+        {
+            return operation;
+        }
+
+        // TODO:
+        // Note that this will poll over requested streaming, which is undesired...
+        operation.Wait(options.CancellationToken);
+        return operation;
     }
 
-    /// <inheritdoc cref="InternalAssistantRunClient.GetRunStepAsync"/>
-    public virtual Task<ClientResult> GetRunStepAsync(string threadId, string runId, string stepId, RequestOptions options)
-        => _runSubClient.GetRunStepAsync(threadId, runId, stepId, options);
+    /// <inheritdoc cref="InternalAssistantRunClient.CreateRunAsync"/>
+    internal virtual Task<ClientResult> CreateRunAsync(string threadId, BinaryContent content, RequestOptions options = null)
+        => _runSubClient.CreateRunAsync(threadId, content, options);
 
-    /// <inheritdoc cref="InternalAssistantRunClient.GetRunStep"/>
-    public virtual ClientResult GetRunStep(string threadId, string runId, string stepId, RequestOptions options)
-        => _runSubClient.GetRunStep(threadId, runId, stepId, options);
+    /// <inheritdoc cref="InternalAssistantRunClient.CreateRun"/>
+    internal virtual ClientResult CreateRun(string threadId, BinaryContent content, RequestOptions options = null)
+        => _runSubClient.CreateRun(threadId, content, options);
 
     /// <inheritdoc cref="InternalAssistantThreadClient.CreateThreadAsync"/>
     public virtual Task<ClientResult> CreateThreadAsync(BinaryContent content, RequestOptions options = null)
