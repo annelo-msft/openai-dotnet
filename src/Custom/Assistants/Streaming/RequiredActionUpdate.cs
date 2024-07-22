@@ -11,27 +11,14 @@ namespace OpenAI.Assistants;
 /// Distinct <see cref="RequiredActionUpdate"/> instances will generated for each required action, meaning that
 /// parallel function calling will present multiple updates even if the tool calls arrive at the same time.
 /// </remarks>
-public class RequiredActionUpdate : StreamingUpdate
+public class RequiredActionUpdate : RunUpdate
 {
-    /// <inheritdoc cref="InternalRequiredFunctionToolCall.InternalName"/>
-    public string FunctionName => AsFunctionCall?.FunctionName;
+    public IReadOnlyList<RequiredAction> RequiredActions { get; }
 
-    /// <inheritdoc cref="InternalRequiredFunctionToolCall.InternalArguments"/>
-    public string FunctionArguments => AsFunctionCall?.FunctionArguments;
-
-    /// <inheritdoc cref="InternalRequiredFunctionToolCall.Id"/>
-    public string ToolCallId => AsFunctionCall?.Id;
-
-    private InternalRequiredFunctionToolCall AsFunctionCall => _requiredAction as InternalRequiredFunctionToolCall;
-
-    private readonly ThreadRun _run;
-    private readonly RequiredAction _requiredAction;
-
-    internal RequiredActionUpdate(ThreadRun run, RequiredAction action)
-        : base(StreamingUpdateReason.RunRequiresAction)
+    internal RequiredActionUpdate(ThreadRun run, IReadOnlyList<RequiredAction> actions)
+        : base(run, StreamingUpdateReason.RunRequiresAction)
     {
-        _run = run;
-        _requiredAction = action;
+        RequiredActions = actions;
     }
 
     /// <summary>
@@ -39,16 +26,11 @@ public class RequiredActionUpdate : StreamingUpdate
     /// update.
     /// </summary>
     /// <returns></returns>
-    public ThreadRun GetThreadRun() => _run;
+    public ThreadRun GetThreadRun() => Value;
 
     internal static IEnumerable<RequiredActionUpdate> DeserializeRequiredActionUpdates(JsonElement element)
     {
         ThreadRun run = ThreadRun.DeserializeThreadRun(element);
-        List<RequiredActionUpdate> updates = [];
-        foreach (RequiredAction action in run.RequiredActions ?? [])
-        {
-            updates.Add(new(run, action));
-        }
-        return updates;
+        return [new(run, run.RequiredActions)];
     }
 }

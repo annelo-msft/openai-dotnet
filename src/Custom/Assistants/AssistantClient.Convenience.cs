@@ -218,8 +218,12 @@ public partial class AssistantClient
     /// <param name="assistant"> The assistant that should be used when evaluating the thread. </param>
     /// <param name="options"> Additional options for the run. </param>
     /// <returns> A new <see cref="ThreadRun"/> instance. </returns>
-    public virtual Task<ClientResult<ThreadRun>> CreateRunAsync(AssistantThread thread, Assistant assistant, RunCreationOptions options = null)
-        => CreateRunAsync(thread?.Id, assistant?.Id, options);
+    public virtual async Task<RunOperation> CreateRunAsync(
+        ReturnWhen returnWhen,
+        AssistantThread thread,
+        Assistant assistant,
+        RunCreationOptions options = null)
+        => await CreateRunAsync(returnWhen, thread?.Id, assistant?.Id, options).ConfigureAwait(false);
 
     /// <summary>
     /// Begins a new <see cref="ThreadRun"/> that evaluates a <see cref="AssistantThread"/> using a specified
@@ -229,21 +233,26 @@ public partial class AssistantClient
     /// <param name="assistant"> The assistant that should be used when evaluating the thread. </param>
     /// <param name="options"> Additional options for the run. </param>
     /// <returns> A new <see cref="ThreadRun"/> instance. </returns>
-    public virtual ClientResult<ThreadRun> CreateRun(AssistantThread thread, Assistant assistant, RunCreationOptions options = null)
-        => CreateRun(thread?.Id, assistant?.Id, options);
-
-    /// <summary>
-    /// Begins a new streaming <see cref="ThreadRun"/> that evaluates a <see cref="AssistantThread"/> using a specified
-    /// <see cref="Assistant"/>.
-    /// </summary>
-    /// <param name="thread"> The thread that the run should evaluate. </param>
-    /// <param name="assistant"> The assistant that should be used when evaluating the thread. </param>
-    /// <param name="options"> Additional options for the run. </param>
-    public virtual AsyncCollectionResult<StreamingUpdate> CreateRunStreamingAsync(
-        AssistantThread thread,
-        Assistant assistant,
+    public virtual RunOperation CreateRun(
+        ReturnWhen returnWhen,
+        AssistantThread thread, 
+        Assistant assistant, 
         RunCreationOptions options = null)
-            => CreateRunStreamingAsync(thread?.Id, assistant?.Id, options);
+        => CreateRun(returnWhen, thread?.Id, assistant?.Id, options);
+
+    // TODO: is async variant needed if OperationResult has sync and async methods?
+    ///// <summary>
+    ///// Begins a new streaming <see cref="ThreadRun"/> that evaluates a <see cref="AssistantThread"/> using a specified
+    ///// <see cref="Assistant"/>.
+    ///// </summary>
+    ///// <param name="thread"> The thread that the run should evaluate. </param>
+    ///// <param name="assistant"> The assistant that should be used when evaluating the thread. </param>
+    ///// <param name="options"> Additional options for the run. </param>
+    //public virtual StreamingThreadRunOperation CreateRunStreamingAsync(
+    //    AssistantThread thread,
+    //    Assistant assistant,
+    //    RunCreationOptions options = null)
+    //        => CreateRunStreamingAsync(thread?.Id, assistant?.Id, options);
 
     /// <summary>
     /// Begins a new streaming <see cref="ThreadRun"/> that evaluates a <see cref="AssistantThread"/> using a specified
@@ -252,7 +261,7 @@ public partial class AssistantClient
     /// <param name="thread"> The thread that the run should evaluate. </param>
     /// <param name="assistant"> The assistant that should be used when evaluating the thread. </param>
     /// <param name="options"> Additional options for the run. </param>
-    public virtual CollectionResult<StreamingUpdate> CreateRunStreaming(
+    public virtual StreamingRunOperation CreateRunStreaming(
         AssistantThread thread,
         Assistant assistant,
         RunCreationOptions options = null)
@@ -265,11 +274,12 @@ public partial class AssistantClient
     /// <param name="threadOptions"> Options for the new thread that will be created. </param>
     /// <param name="runOptions"> Additional options to apply to the run that will begin. </param>
     /// <returns> A new <see cref="ThreadRun"/>. </returns>
-    public virtual Task<ClientResult<ThreadRun>> CreateThreadAndRunAsync(
+    public virtual async Task<RunOperation> CreateThreadAndRunAsync(
+        ReturnWhen returnWhen,
         Assistant assistant,
         ThreadCreationOptions threadOptions = null,
         RunCreationOptions runOptions = null)
-            => CreateThreadAndRunAsync(assistant?.Id, threadOptions, runOptions);
+            => await CreateThreadAndRunAsync(returnWhen, assistant?.Id, threadOptions, runOptions).ConfigureAwait(false);
 
     /// <summary>
     /// Creates a new thread and immediately begins a run against it using the specified <see cref="Assistant"/>.
@@ -278,11 +288,12 @@ public partial class AssistantClient
     /// <param name="threadOptions"> Options for the new thread that will be created. </param>
     /// <param name="runOptions"> Additional options to apply to the run that will begin. </param>
     /// <returns> A new <see cref="ThreadRun"/>. </returns>
-    public virtual ClientResult<ThreadRun> CreateThreadAndRun(
+    public virtual RunOperation CreateThreadAndRun(
+        ReturnWhen returnWhen,
         Assistant assistant,
         ThreadCreationOptions threadOptions = null,
         RunCreationOptions runOptions = null)
-            => CreateThreadAndRun(assistant?.Id, threadOptions, runOptions);
+            => CreateThreadAndRun(returnWhen, assistant?.Id, threadOptions, runOptions);
 
     /// <summary>
     /// Creates a new thread and immediately begins a streaming run against it using the specified <see cref="Assistant"/>.
@@ -290,19 +301,7 @@ public partial class AssistantClient
     /// <param name="assistant"> The assistant that the new run should use. </param>
     /// <param name="threadOptions"> Options for the new thread that will be created. </param>
     /// <param name="runOptions"> Additional options to apply to the run that will begin. </param>
-    public virtual AsyncCollectionResult<StreamingUpdate> CreateThreadAndRunStreamingAsync(
-        Assistant assistant,
-        ThreadCreationOptions threadOptions = null,
-        RunCreationOptions runOptions = null)
-            => CreateThreadAndRunStreamingAsync(assistant?.Id, threadOptions, runOptions);
-
-    /// <summary>
-    /// Creates a new thread and immediately begins a streaming run against it using the specified <see cref="Assistant"/>.
-    /// </summary>
-    /// <param name="assistant"> The assistant that the new run should use. </param>
-    /// <param name="threadOptions"> Options for the new thread that will be created. </param>
-    /// <param name="runOptions"> Additional options to apply to the run that will begin. </param>
-    public virtual CollectionResult<StreamingUpdate> CreateThreadAndRunStreaming(
+    public virtual StreamingRunOperation CreateThreadAndRunStreaming(
         Assistant assistant,
         ThreadCreationOptions threadOptions = null,
         RunCreationOptions runOptions = null)
@@ -342,123 +341,5 @@ public partial class AssistantClient
         Argument.AssertNotNull(thread, nameof(thread));
 
         return GetRuns(thread.Id, options);
-    }
-
-    /// <summary>
-    /// Gets a refreshed instance of an existing <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to get a refreshed instance of. </param>
-    /// <returns> A new <see cref="ThreadRun"/> instance with updated information. </returns>
-    public virtual Task<ClientResult<ThreadRun>> GetRunAsync(ThreadRun run)
-        => GetRunAsync(run?.ThreadId, run?.Id);
-
-    /// <summary>
-    /// Gets a refreshed instance of an existing <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to get a refreshed instance of. </param>
-    /// <returns> A new <see cref="ThreadRun"/> instance with updated information. </returns>
-    public virtual ClientResult<ThreadRun> GetRun(ThreadRun run)
-        => GetRun(run?.ThreadId, run?.Id);
-
-    /// <summary>
-    /// Submits a collection of required tool call outputs to a run and resumes the run.
-    /// </summary>
-    /// <param name="run"> The run that reached a <c>requires_action</c> status. </param>
-    /// <param name="toolOutputs">
-    /// The tool outputs, corresponding to <see cref="InternalRequiredToolCall"/> instances from the run.
-    /// </param>
-    /// <returns> The <see cref="ThreadRun"/>, updated after the submission was processed. </returns>
-    public virtual Task<ClientResult<ThreadRun>> SubmitToolOutputsToRunAsync(
-        ThreadRun run,
-        IEnumerable<ToolOutput> toolOutputs)
-            => SubmitToolOutputsToRunAsync(run?.ThreadId, run?.Id, toolOutputs);
-
-    /// <summary>
-    /// Submits a collection of required tool call outputs to a run and resumes the run.
-    /// </summary>
-    /// <param name="run"> The run that reached a <c>requires_action</c> status. </param>
-    /// <param name="toolOutputs">
-    /// The tool outputs, corresponding to <see cref="InternalRequiredToolCall"/> instances from the run.
-    /// </param>
-    /// <returns> The <see cref="ThreadRun"/>, updated after the submission was processed. </returns>
-    public virtual ClientResult<ThreadRun> SubmitToolOutputsToRun(
-        ThreadRun run,
-        IEnumerable<ToolOutput> toolOutputs)
-            => SubmitToolOutputsToRun(run?.ThreadId, run?.Id, toolOutputs);
-
-    /// <summary>
-    /// Submits a collection of required tool call outputs to a run and resumes the run with streaming enabled.
-    /// </summary>
-    /// <param name="run"> The run that reached a <c>requires_action</c> status. </param>
-    /// <param name="toolOutputs">
-    /// The tool outputs, corresponding to <see cref="InternalRequiredToolCall"/> instances from the run.
-    /// </param>
-    public virtual AsyncCollectionResult<StreamingUpdate> SubmitToolOutputsToRunStreamingAsync(
-        ThreadRun run,
-        IEnumerable<ToolOutput> toolOutputs)
-            => SubmitToolOutputsToRunStreamingAsync(run?.ThreadId, run?.Id, toolOutputs);
-
-    /// <summary>
-    /// Submits a collection of required tool call outputs to a run and resumes the run with streaming enabled.
-    /// </summary>
-    /// <param name="run"> The run that reached a <c>requires_action</c> status. </param>
-    /// <param name="toolOutputs">
-    /// The tool outputs, corresponding to <see cref="InternalRequiredToolCall"/> instances from the run.
-    /// </param>
-    public virtual CollectionResult<StreamingUpdate> SubmitToolOutputsToRunStreaming(
-        ThreadRun run,
-        IEnumerable<ToolOutput> toolOutputs)
-            => SubmitToolOutputsToRunStreaming(run?.ThreadId, run?.Id, toolOutputs);
-
-    /// <summary>
-    /// Cancels an in-progress <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to cancel. </param>
-    /// <returns> An updated <see cref="ThreadRun"/> instance, reflecting the new status of the run. </returns>
-    public virtual Task<ClientResult<ThreadRun>> CancelRunAsync(ThreadRun run)
-        => CancelRunAsync(run?.ThreadId, run?.Id);
-
-    /// <summary>
-    /// Cancels an in-progress <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to cancel. </param>
-    /// <returns> An updated <see cref="ThreadRun"/> instance, reflecting the new status of the run. </returns>
-    public virtual ClientResult<ThreadRun> CancelRun(ThreadRun run)
-        => CancelRun(run?.ThreadId, run?.Id);
-
-    /// <summary>
-    /// Gets a page collection holding <see cref="RunStep"/> instances associated with a <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to list run steps from. </param>
-    /// <param name="options"> Options describing the collection to return. </param>
-    /// <remarks> <see cref="AsyncPageCollection{T}"/> holds pages of values. To obtain a collection of values, call
-    /// <see cref="AsyncPageCollection{T}.GetAllValuesAsync(System.Threading.CancellationToken)"/>. To obtain the current
-    /// page of values, call <see cref="AsyncPageCollection{T}.GetCurrentPageAsync"/>.</remarks>
-    /// <returns> A collection of pages of <see cref="RunStep"/>. </returns>
-    public virtual AsyncPageCollection<RunStep> GetRunStepsAsync(
-        ThreadRun run,
-        RunStepCollectionOptions options = default)
-    {
-        Argument.AssertNotNull(run, nameof(run));
-
-        return GetRunStepsAsync(run.ThreadId, run.Id, options);
-    }
-
-    /// <summary>
-    /// Gets a page collection holding <see cref="RunStep"/> instances associated with a <see cref="ThreadRun"/>.
-    /// </summary>
-    /// <param name="run"> The run to list run steps from. </param>
-    /// <param name="options"> Options describing the collection to return. </param>
-    /// <remarks> <see cref="PageCollection{T}"/> holds pages of values. To obtain a collection of values, call
-    /// <see cref="PageCollection{T}.GetAllValues(System.Threading.CancellationToken)"/>. To obtain the current
-    /// page of values, call <see cref="PageCollection{T}.GetCurrentPage"/>.</remarks>
-    /// <returns> A collection of pages of <see cref="RunStep"/>. </returns>
-    public virtual PageCollection<RunStep> GetRunSteps(
-        ThreadRun run,
-        RunStepCollectionOptions options = default)
-    {
-        Argument.AssertNotNull(run, nameof(run));
-
-        return GetRunSteps(run.ThreadId, run.Id, options);
     }
 }

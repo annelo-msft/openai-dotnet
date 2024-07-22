@@ -45,7 +45,7 @@ public partial class AssistantExamples
                 }
         });
 
-        AsyncCollectionResult<StreamingUpdate> streamingUpdates = assistantClient.CreateRunStreamingAsync(
+        StreamingRunOperation runOperation = assistantClient.CreateRunStreaming(
             thread,
             assistant,
             new RunCreationOptions()
@@ -53,7 +53,7 @@ public partial class AssistantExamples
                 AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
             });
 
-        await foreach (StreamingUpdate streamingUpdate in streamingUpdates)
+        await foreach (StreamingUpdate streamingUpdate in runOperation.GetUpdatesStreamingAsync())
         {
             if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunCreated)
             {

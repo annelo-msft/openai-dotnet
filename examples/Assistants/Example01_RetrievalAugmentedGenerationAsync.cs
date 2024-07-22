@@ -5,7 +5,6 @@ using System;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace OpenAI.Examples;
@@ -89,18 +88,11 @@ public partial class AssistantExamples
             InitialMessages = { "How well did product 113045 sell in February? Graph its trend over time." }
         };
 
-        ThreadRun threadRun = await assistantClient.CreateThreadAndRunAsync(assistant.Id, threadOptions);
-
-        // Check back to see when the run is done
-        do
-        {
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            threadRun = assistantClient.GetRun(threadRun.ThreadId, threadRun.Id);
-        } while (!threadRun.Status.IsTerminal);
+        RunOperation runOperation = await assistantClient.CreateThreadAndRunAsync(ReturnWhen.Completed, assistant.Id, threadOptions);
 
         // Finally, we'll print out the full history for the thread that includes the augmented generation
         AsyncPageCollection<ThreadMessage> messagePages
-            = assistantClient.GetMessagesAsync(threadRun.ThreadId, new MessageCollectionOptions() { Order = ListOrder.OldestFirst });
+            = assistantClient.GetMessagesAsync(runOperation.ThreadId, new MessageCollectionOptions() { Order = ListOrder.OldestFirst });
         IAsyncEnumerable<ThreadMessage> messages = messagePages.GetAllValuesAsync();
 
         await foreach (ThreadMessage message in messages)
@@ -144,7 +136,7 @@ public partial class AssistantExamples
         }
 
         // Optionally, delete any persistent resources you no longer need.
-        _ = await assistantClient.DeleteThreadAsync(threadRun.ThreadId);
+        _ = await assistantClient.DeleteThreadAsync(runOperation.ThreadId);
         _ = await assistantClient.DeleteAssistantAsync(assistant);
         _ = await fileClient.DeleteFileAsync(salesFile);
     }

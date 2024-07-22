@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework;
 using OpenAI.Assistants;
 using System;
-using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -91,43 +90,34 @@ public partial class AssistantExamples
         #endregion
 
         #region Step 3 - Initiate a streaming run
-        AsyncCollectionResult<StreamingUpdate> asyncUpdates
-            = client.CreateRunStreamingAsync(thread, assistant);
+        StreamingRunOperation runOperation = client.CreateRunStreaming(thread, assistant);
+        IAsyncEnumerable<StreamingUpdate> updates = runOperation.GetUpdatesStreamingAsync();
 
-        ThreadRun currentRun = null;
-        do
+        await foreach (StreamingUpdate update in updates)
         {
-            currentRun = null;
-            List<ToolOutput> outputsToSubmit = [];
-            await foreach (StreamingUpdate update in asyncUpdates)
+            if (update is RequiredActionUpdate requiredActionUpdate)
             {
-                if (update is RunUpdate runUpdate)
+                List<ToolOutput> outputsToSubmit = [];
+
+                foreach (RequiredAction action in requiredActionUpdate.RequiredActions)
                 {
-                    currentRun = runUpdate;
-                }
-                else if (update is RequiredActionUpdate requiredActionUpdate)
-                {
-                    if (requiredActionUpdate.FunctionName == getTemperatureTool.FunctionName)
+                    if (action.FunctionName == getTemperatureTool.FunctionName)
                     {
-                        outputsToSubmit.Add(new ToolOutput(requiredActionUpdate.ToolCallId, "57"));
+                        outputsToSubmit.Add(new ToolOutput(action.ToolCallId, "57"));
                     }
-                    else if (requiredActionUpdate.FunctionName == getRainProbabilityTool.FunctionName)
+                    else if (action.FunctionName == getRainProbabilityTool.FunctionName)
                     {
-                        outputsToSubmit.Add(new ToolOutput(requiredActionUpdate.ToolCallId, "25%"));
+                        outputsToSubmit.Add(new ToolOutput(action.ToolCallId, "25%"));
                     }
                 }
-                else if (update is MessageContentUpdate contentUpdate)
-                {
-                    Console.Write(contentUpdate.Text);
-                }
+
+                await runOperation.SubmitToolOutputsToRunStreamingAsync(outputsToSubmit);
             }
-            if (outputsToSubmit.Count > 0)
+            else if (update is MessageContentUpdate contentUpdate)
             {
-                asyncUpdates = client.SubmitToolOutputsToRunStreamingAsync(currentRun, outputsToSubmit);
+                Console.Write(contentUpdate.Text);
             }
         }
-        while (currentRun?.Status.IsTerminal == false);
-
         #endregion
 
         // Optionally, delete the resources for tidiness if no longer needed.

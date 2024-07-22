@@ -13,7 +13,7 @@ public partial class AssistantExamples
     [Test]
     public void Example02_FunctionCalling()
     {
-        #region
+        #region Define Functions
         string GetCurrentLocation()
         {
             // Call a location API here.
@@ -64,7 +64,7 @@ public partial class AssistantExamples
 #pragma warning disable OPENAI001
         AssistantClient client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
 
-        #region
+        #region Create Assistant
         // Create an assistant that can call the function tools.
         AssistantCreationOptions assistantOptions = new()
         {
@@ -78,29 +78,27 @@ public partial class AssistantExamples
         Assistant assistant = client.CreateAssistant("gpt-4-turbo", assistantOptions);
         #endregion
 
-        #region
+        #region Create Thread and Run
         // Create a thread with an initial user message and run it.
         ThreadCreationOptions threadOptions = new()
         {
             InitialMessages = { "What's the weather like today?" }
         };
 
-        ThreadRun run = client.CreateThreadAndRun(assistant.Id, threadOptions);
+        RunOperation runOperation = client.CreateThreadAndRun(ReturnWhen.Started, assistant.Id, threadOptions);
         #endregion
 
-        #region
-        // Poll the run until it is no longer queued or in progress.
-        while (!run.Status.IsTerminal)
-        {
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            run = client.GetRun(run.ThreadId, run.Id);
+        #region Submit tool outputs to run
 
-            // If the run requires action, resolve them.
-            if (run.Status == RunStatus.RequiresAction)
+        IEnumerable<ThreadRun> updates = runOperation.GetUpdates();
+
+        foreach (ThreadRun update in updates)
+        {
+            if (update.Status == RunStatus.RequiresAction)
             {
                 List<ToolOutput> toolOutputs = [];
 
-                foreach (RequiredAction action in run.RequiredActions)
+                foreach (RequiredAction action in runOperation.Value.RequiredActions)
                 {
                     switch (action.FunctionName)
                     {
@@ -142,17 +140,19 @@ public partial class AssistantExamples
                 }
 
                 // Submit the tool outputs to the assistant, which returns the run to the queued state.
-                run = client.SubmitToolOutputsToRun(run.ThreadId, run.Id, toolOutputs);
+                runOperation.SubmitToolOutputsToRun(toolOutputs);
             }
         }
+
         #endregion
 
-        #region
-        // With the run complete, list the messages and display their content
-        if (run.Status == RunStatus.Completed)
+        #region Get and display messages
+
+        // If the run completed successfully, list the messages and display their content
+        if (runOperation.Status == RunStatus.Completed)
         {
             PageCollection<ThreadMessage> messagePages
-                = client.GetMessages(run.ThreadId, new MessageCollectionOptions() { Order = ListOrder.OldestFirst });
+                = client.GetMessages(runOperation.ThreadId, new MessageCollectionOptions() { Order = ListOrder.OldestFirst });
             IEnumerable<ThreadMessage> messages = messagePages.GetAllValues();
 
             foreach (ThreadMessage message in messages)
@@ -186,7 +186,7 @@ public partial class AssistantExamples
         }
         else
         {
-            throw new NotImplementedException(run.Status.ToString());
+            throw new NotImplementedException(runOperation.Status.ToString());
         }
         #endregion
     }
